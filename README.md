@@ -1,6 +1,6 @@
-# 🏠 WiFi RF Signal Scanner - Complete Project Package
+# 🏠 WiFi RF Signal Scanner - 
 
-## ⚡ What You're Getting
+
 
 A **complete, production-ready source code package** for building a WiFi-based indoor positioning and home monitoring system that:
 
