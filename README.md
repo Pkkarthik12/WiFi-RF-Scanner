@@ -1,4 +1,4 @@
-# 🏠 WiFi RF Signal Scanner - 
+# 🏠 WiFi RF Signal Scanner
 
 
 
