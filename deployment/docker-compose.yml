@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: wifiuser
+      POSTGRES_PASSWORD: wifipassword
+      POSTGRES_DB: wifitracker
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wifiuser -d wifitracker"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - wifinet
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - wifinet
+
+  backend:
+    build: 
+      context: ../backend
+      dockerfile: ../deployment/Dockerfile
+      target: backend-prod
+    environment:
+      - DATABASE_URL=postgresql://wifiuser:wifipassword@postgres:5432/wifitracker
+      - REDIS_URL=redis://redis:6379/0
+      - LOG_LEVEL=INFO
+    volumes:
+      - ../backend/config:/app/config
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - wifinet
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: ../deployment/Dockerfile
+      target: frontend-prod
+    depends_on:
+      - backend
+    networks:
+      - wifinet
+
+  nginx:
+    image: nginx:alpine
+    volumes:
+      - ../deployment/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - wifinet
+
+networks:
+  wifinet:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
